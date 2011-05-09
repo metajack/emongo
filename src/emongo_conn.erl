@@ -103,6 +103,7 @@ loop(State, Leftover) ->
                     loop(State#state{requests=Others}, <<>>)
             end;
 		{tcp, Socket, Data} ->
+                        inet:setopts(Socket, [{active, once}]),
 			case emongo_packet:decode_response(<<Leftover/binary, Data/binary>>) of
 				undefined ->
 					loop(State, <<Leftover/binary, Data/binary>>);
@@ -124,7 +125,7 @@ loop(State, Leftover) ->
 	end.
 	
 open_socket(Host, Port) ->
-	case gen_tcp:connect(Host, Port, [binary, {active, true}]) of
+	case gen_tcp:connect(Host, Port, [binary, {active, once}]) of
 		{ok, Sock} ->
 			Sock;
 		{error, Reason} ->

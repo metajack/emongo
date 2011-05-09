@@ -72,7 +72,7 @@ send_recv(Pid, ReqID, Packet, Timeout) ->
 %% gen_server %%
 
 init([PoolId, Host, Port]) ->
-    case gen_tcp:connect(Host, Port, [binary, {active, true}, {nodelay, true}], ?TIMEOUT) of
+    case gen_tcp:connect(Host, Port, [binary, {active, once}, {nodelay, true}], ?TIMEOUT) of
         {ok, Socket} ->
             {ok, #state{pool_id=PoolId, socket=Socket, requests=[], leftover = <<>>}};
         {error, Reason} ->
@@ -107,7 +107,10 @@ handle_info(?abort(ReqId), #state{requests=Requests}=State) ->
     State1 = State#state{requests=lists:keydelete(ReqId, 1, Requests)},
     {noreply, State1};
 
-handle_info({tcp, _Socket, Data}, State) ->
+handle_info({tcp, Socket, Data}, State) ->
+    %% enable another packet to be received
+    ok = inet:setopts(Socket, [{active, once}]),
+
     Leftover = <<(State#state.leftover)/binary, Data/binary>>,
     {noreply, process_bin(State#state{leftover= <<>>}, Leftover)};
 
